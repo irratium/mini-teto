@@ -25,9 +25,10 @@ pyinstaller --noconfirm --clean --onefile --noconsole --name mini-teto ^
     --add-data "sprites;sprites" %FONTS% ^
     --hidden-import mini_teto.winplat --hidden-import PIL._tkinter_finder ^
     --hidden-import winrt.windows.media.control --hidden-import winrt.windows.foundation --hidden-import winrt.windows.foundation.collections --hidden-import winrt.windows.storage.streams ^
-    --collect-all sounddevice --collect-all cairo ^
+    --collect-all _sounddevice_data --collect-all cairo ^
     windows\mini_teto_win.py || goto :err
 
+if /i "%~1"=="exe" goto :noinno
 set "ISCC="
 where iscc >nul 2>nul && set "ISCC=iscc"
 if exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
@@ -43,7 +44,7 @@ exit /b 0
 :noinno
 echo.
 echo The program is built: dist\mini-teto.exe
-echo Inno Setup 6 was not found, so no installer yet. Get it from https://jrsoftware.org/isdl.php and run this again.
+echo No installer step here (called with 'exe', or Inno Setup 6 is missing: https://jrsoftware.org/isdl.php).
 exit /b 0
 
 :err
