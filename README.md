@@ -151,6 +151,6 @@ Put your sprites into `sprites/` (11 PNGs, see above).
 
 *Хрум-хрум. Teto Territory!* 🥖
 
-Основано на [tetoOS](https://github.com/saxxumm/tetoOS).
+Основано на коде из [tetoOS](https://github.com/saxxumm/tetoOS).
 
 </div>
