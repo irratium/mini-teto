@@ -21,6 +21,11 @@
 > У Тето есть **полоска голода** (в меню, рядом с красным именем). Без багета она проголодается за 3 часа — и будет об этом говорить.
 > Всё чаще и чаще. Тебя предупредили. 🥖
 
+## Откуда это взялось
+
+Код mini Teto основан на коде проекта **[tetoOS](https://github.com/saxxumm/tetoOS)** от [saxxumm](https://github.com/saxxumm). Огромное спасибо автору! 🥖
+Дальше проект переработан и расширен: кормление и голод, громкость, несколько мониторов, порт на Windows и многое другое.
+
 ## Что она умеет
 
 | | |
@@ -132,6 +137,8 @@ mini-teto/
 
 ## English, quickly
 
+*Based on the code of [tetoOS](https://github.com/saxxumm/tetoOS) by [saxxumm](https://github.com/saxxumm), then extended: feeding and hunger, volume, multi-monitor, a Windows port and more.*
+
 **mini Teto** is a pixel desktop pet of Kasane Teto for **Linux** (Wayland/X11) and **Windows**. Poke her, pet her, throw her across
 your monitors, feed her a baguette (she chases your cursor and jumps for it), listen to her chat (100+ lines) and sing.
 She gets hungry in 3 hours and complains more and more often. She dances to your music. Right-click her for the menu.
@@ -144,7 +151,6 @@ Put your sprites into `sprites/` (11 PNGs, see above).
 
 *Хрум-хрум. Teto Territory!* 🥖
 
-Фанатский проект. Касане Тето — персонаж сообщества UTAU; проект с её создателями и правообладателями не связан.
-Кладите в `sprites/` только то, что вам можно использовать и публиковать.
+Основано на [tetoOS](https://github.com/saxxumm/tetoOS).
 
 </div>
