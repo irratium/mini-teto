@@ -1,0 +1,33 @@
+name: Windows installer
+
+# Builds mini-teto-setup.exe on GitHub's own Windows machines: nobody needs Python installed.
+# Put this repo on GitHub (mini_teto/, sprites/, windows/, .github/), push, open the Actions tab,
+# and download the "mini-teto-setup" artifact. Pushing a tag like v1.0.0 also makes a release.
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+      - name: Build
+        shell: cmd
+        run: windows\build.bat
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mini-teto-setup
+          path: dist/mini-teto-setup.exe
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/mini-teto-setup.exe
