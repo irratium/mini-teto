@@ -28,19 +28,22 @@ pyinstaller --noconfirm --clean --onefile --noconsole --name mini-teto ^
     --collect-all sounddevice --collect-all cairo ^
     windows\mini_teto_win.py || goto :err
 
-set ISCC=
-where iscc >nul 2>nul && set ISCC=iscc
-if exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" set ISCC="%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
-if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" set ISCC="%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
-if "%ISCC%"=="" (
-    echo.
-    echo The program is built: dist\mini-teto.exe
-    echo Inno Setup 6 was not found, so no installer yet. Get it from https://jrsoftware.org/isdl.php and run this again.
-    exit /b 0
-)
-%ISCC% windows\mini-teto.iss || goto :err
+set "ISCC="
+where iscc >nul 2>nul && set "ISCC=iscc"
+if exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
+if exist "%ProgramFiles%\Inno Setup 6\ISCC.exe" set "ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe"
+if exist "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" set "ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe"
+if not defined ISCC goto :noinno
+"%ISCC%" windows\mini-teto.iss || goto :err
+echo.
 echo.
 echo Done: dist\mini-teto-setup.exe
+exit /b 0
+
+:noinno
+echo.
+echo The program is built: dist\mini-teto.exe
+echo Inno Setup 6 was not found, so no installer yet. Get it from https://jrsoftware.org/isdl.php and run this again.
 exit /b 0
 
 :err
