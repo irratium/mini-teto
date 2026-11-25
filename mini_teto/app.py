@@ -182,7 +182,7 @@ def run(argv):
         gi.require_version("GtkLayerShell", "0.1")
         from gi.repository import GtkLayerShell
 
-    FONT = "Fredoka,Nunito,Comic Neue,Noto Sans,Sans"
+    FONT = "Fredoka,Nunito,Comic Neue,Noto Sans,Noto Sans JP,Noto Sans CJK JP,Sans"
     MENU_W, SLIDER_X, SLIDER_END = 220, 100, 52     # menu bubble width; the volume slider's span inside it
 
     # --- text -------------------------------------------------------------------------
