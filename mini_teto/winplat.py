@@ -236,49 +236,118 @@ def fullscreen_in_front():
     return r.left <= m.left and r.top <= m.top and r.right >= m.right and r.bottom >= m.bottom
 
 
-# --- text: Pillow draws it, cairo paints it ---------------------------------------------------------
-_fonts = {}
+# --- text: Pillow draws it, cairo paints it -----------------------------------------------------------
+# Every character is drawn with the first font in a chain that has it, like Pango's fallback on Linux:
+# Fredoka (her look) -> Nunito (Cyrillic) -> Segoe UI -> Noto Sans JP / Yu Gothic / Meiryo (Japanese) -> symbols.
+_chains = {}
+_have = {}
 _masks = OrderedDict()
 
 
-def _font(px, bold, symbol):
-    key = (px, bold, symbol)
-    if key not in _fonts:
-        from PIL import ImageFont
-        names = (["seguisym.ttf", "DejaVuSans.ttf"] if symbol else
-                 ["segoeuib.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"] if bold else
-                 ["segoeui.ttf", "arial.ttf", "DejaVuSans.ttf"])
-        dirs = [os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts"), "/usr/share/fonts/truetype/dejavu"]
-        path = next((os.path.join(d, n) for n in names for d in dirs if os.path.exists(os.path.join(d, n))), None)
-        root = sys._MEIPASS if getattr(sys, "frozen", False) else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        mine = os.path.join(root, "fonts", "symbol.ttf" if symbol else "bold.ttf" if bold else "regular.ttf")
-        if os.path.exists(mine):                      # fonts/bold.ttf & regular.ttf: the font she has on Linux
-            path = mine
+def _font_dirs():
+    """Where downloaded or dropped-in fonts live: next to the exe (the installer puts them there), in the
+    user's settings folder, and bundled."""
+    frozen = getattr(sys, "frozen", False)
+    root = sys._MEIPASS if frozen else os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    exe = os.path.dirname(sys.executable) if frozen else root
+    mine = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "mini-teto")
+    return [os.path.join(exe, "fonts"), os.path.join(mine, "fonts"), os.path.join(root, "fonts")]
+
+
+def _find(patterns, dirs):
+    import fnmatch
+    for d in dirs:
         try:
-            _fonts[key] = ImageFont.truetype(path, px) if path else ImageFont.load_default(px)
+            names = sorted(os.listdir(d))
+        except OSError:
+            continue
+        for pat in patterns:
+            for n in names:
+                if fnmatch.fnmatch(n.lower(), pat.lower()):
+                    return os.path.join(d, n)
+    return None
+
+
+def _candidates(bold):
+    mine = _font_dirs()
+    system = [os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts"), "/usr/share/fonts/truetype/dejavu",
+              "/usr/share/fonts/opentype/noto"]
+    found = [
+        _find(["bold.ttf" if bold else "regular.ttf"], mine),                       # fonts/bold.ttf: your own pick
+        _find(["Fredoka*.ttf"], mine),
+        _find(["Nunito*.ttf"], mine),
+        _find(["segoeuib.ttf", "arialbd.ttf", "DejaVuSans-Bold.ttf"] if bold else
+              ["segoeui.ttf", "arial.ttf", "DejaVuSans.ttf"], system),
+        _find(["NotoSansJP*.ttf", "cjk.ttf"], mine),
+        _find(["YuGothB.ttc", "meiryob.ttc", "msgothic.ttc", "NotoSansCJK-Bold.ttc"] if bold else
+              ["YuGothM.ttc", "meiryo.ttc", "msgothic.ttc", "NotoSansCJK-Regular.ttc"], system),
+        _find(["symbol.ttf"], mine),
+        _find(["seguisym.ttf", "DejaVuSans.ttf"], system),
+    ]
+    out = []
+    for p in found:
+        if p and p not in out:
+            out.append(p)
+    return out
+
+
+def _chain(px, bold):
+    key = (px, bold)
+    if key not in _chains:
+        from PIL import ImageFont
+        fonts = []
+        for path in _candidates(bold):
+            try:
+                f = ImageFont.truetype(path, px)
+            except Exception:
+                continue
+            try:                                   # variable fonts (Fredoka, Nunito, Noto Sans JP): pick the weight
+                want = b"Bold" if bold else b"Regular"
+                if want in f.get_variation_names():
+                    f.set_variation_by_name(want)
+            except Exception:
+                pass
+            fonts.append(f)
+        _chains[key] = fonts or [ImageFont.load_default(px)]
+    return _chains[key]
+
+
+def _ink(font, ch):
+    from PIL import Image, ImageDraw
+    n = int(getattr(font, "size", 16) * 2) + 8
+    im = Image.new("L", (n, n), 0)
+    ImageDraw.Draw(im).text((4, 4), ch, font=font, fill=255)
+    return im.tobytes()
+
+
+def _has(font, ch):
+    """Does this font have the character? (its "missing" box looks like the box for U+FFFF, which no font has)"""
+    key = (id(font), ch)
+    r = _have.get(key)
+    if r is None:
+        try:
+            r = _ink(font, ch) != _ink(font, "\uffff")
         except Exception:
-            _fonts[key] = ImageFont.load_default()
-    return _fonts[key]
+            r = True
+        _have[key] = r
+    return r
 
 
-def _symbol(ch):
-    o = ord(ch)
-    return 0x2190 <= o <= 0x2BFF or o >= 0x1F000      # arrows, hearts, notes, lightning: not in Segoe UI itself
-
-
-def _runs(text):
+def _runs(text, px, bold):
+    """[[substring, font]]: consecutive characters that come from the same font."""
+    chain = _chain(px, bold)
     out = []
     for ch in text:
-        s = _symbol(ch)
-        if out and out[-1][1] == s:
+        f = next((x for x in chain if _has(x, ch)), chain[0])
+        if out and out[-1][1] is f:
             out[-1][0] += ch
         else:
-            out.append([ch, s])
+            out.append([ch, f])
     return out
 
 
 def _width(text, px, bold):
-    return sum(_font(px, bold, s).getlength(r) for r, s in _runs(text))
+    return sum(f.getlength(r) for r, f in _runs(text, px, bold))
 
 
 def _wrap(text, px, bold, width):
@@ -340,8 +409,7 @@ def _mask(lay, text, size, bold, width, outlined):
     d = ImageDraw.Draw(img)
     for i, line in enumerate(lay.lines):
         x = _PAD
-        for run, sym in _runs(line):
-            f = _font(lay.px, lay.bold, sym)
+        for run, f in _runs(line, lay.px, lay.bold):
             d.text((x, _PAD + i * lay.lh + (lay.lh - lay.px) // 3), run, font=f, fill=255, stroke_width=2 if outlined else 0)
             x += f.getlength(run)
     w, h = img.size
